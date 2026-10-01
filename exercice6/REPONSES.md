@@ -1,0 +1,16 @@
+## Exercice 6
+
+Fuite introduite : une seconde liste `autre` de trois éléments (1, 2, 3), construite juste après la première et jamais libérée. Corrigée ensuite par `liste_liberer(autre);` : c'est la version du code commitée.
+
+| Mesure | Sans la fuite | Avec la fuite |
+| --- | --- | --- |
+| Compteur après construction | 5 | 8 |
+| Compteur après libération | 0 | 3 |
+
+Après correction : 8 après construction, 0 après libération.
+
+| Question | Réponse |
+| --- | --- |
+| A | Ce sont des détails internes du module. Si `blocs` était visible, n'importe quel fichier pourrait le modifier (`blocs = 0;`) et fausser la mesure. Si `suivi_malloc` et `suivi_free` étaient publiques, `main.c` pourrait les appeler ou s'en passer, et le compteur ne serait plus fiable. `static` les rend invisibles hors de `liste.c` : seules les fonctions du module touchent au compteur, et la seule porte d'accès est `liste_blocs_en_circulation()`, en lecture seule. On peut aussi changer leur implémentation sans toucher au `.h` ni recompiler `main.c`. |
+| B | Sans le test dans `suivi_malloc`, un `malloc` qui échoue (renvoie `NULL`) compterait quand même un bloc qui n'existe pas : le compteur annoncerait une fuite qui n'en est pas une. Sans le test dans `suivi_free`, `suivi_free(NULL)`, qui est légal (`free(NULL)` ne fait rien), décrémenterait le compteur pour un bloc jamais alloué : il pourrait devenir négatif, ou revenir à 0 et masquer une vraie fuite. Dans les deux cas, le compteur ment. |
+| C | Non : il dit seulement **combien** (3), pas **lesquels** ni **où** ils ont été alloués. Pour les retrouver avec ce seul outil, on procède par dichotomie : on affiche `liste_blocs_en_circulation()` à plusieurs endroits du programme (après chaque construction, après chaque libération) et on cherche l'endroit où il cesse de redescendre. On peut aussi comparer la valeur manquante (3) au nombre de maillons de chaque liste : seule `autre` en a 3. Sur un gros programme, ce travail manuel devient vite pénible, d'où l'exercice 7. |
